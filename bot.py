@@ -15,44 +15,69 @@ coins = [
 ]
 
 def get_klines(pair):
-    url = "https://api.binance.com/api/v3/klines"
-    params = {
-        "symbol": pair,
-        "interval": "15m",
-        "limit": 200
-    }
-    r = requests.get(url, params=params, timeout=10)
-    r.raise_for_status()
-    return r.json()
+    try:
+        url = "https://api.binance.com/api/v3/klines"
+        params = {
+            "symbol": pair,
+            "interval": "15m",
+            "limit": 200
+        }
+
+        r = requests.get(url, params=params, timeout=10)
+
+        if r.status_code != 200:
+            print(f"Error fetching {pair}: {r.text}")
+            return None
+
+        return r.json()
+
+    except Exception as e:
+        print(f"Request failed for {pair}: {e}")
+        return None
+
 
 def send_telegram(message):
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    data = {
-        "chat_id": CHAT_ID,
-        "text": message
-    }
-    requests.post(url, data=data)
+    try:
+        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+
+        data = {
+            "chat_id": CHAT_ID,
+            "text": message
+        }
+
+        requests.post(url, data=data, timeout=10)
+
+    except Exception as e:
+        print("Telegram error:", e)
+
 
 def analyze(pair):
+
     klines = get_klines(pair)
 
+    if not klines:
+        return
+
     df = pd.DataFrame(klines)
-    df[4] = df[4].astype(float)
 
-    price = df[4].iloc[-1]
+    # Close price column
+    df["close"] = df[4].astype(float)
 
-    rsi = ta.momentum.RSIIndicator(df[4]).rsi().iloc[-1]
-    ema = ta.trend.EMAIndicator(df[4], window=200).ema_indicator().iloc[-1]
+    price = df["close"].iloc[-1]
 
-    support = df[4].tail(50).min()
+    rsi = ta.momentum.RSIIndicator(df["close"]).rsi().iloc[-1]
+
+    ema = ta.trend.EMAIndicator(df["close"], window=200).ema_indicator().iloc[-1]
+
+    support = df["close"].tail(50).min()
 
     if price > ema and price <= support * 1.02 and rsi < 40:
 
-        entry = round(price,2)
-        tp1 = round(price*1.02,2)
-        tp2 = round(price*1.05,2)
-        tp3 = round(price*1.08,2)
-        sl = round(price*0.98,2)
+        entry = round(price, 2)
+        tp1 = round(price * 1.02, 2)
+        tp2 = round(price * 1.05, 2)
+        tp3 = round(price * 1.08, 2)
+        sl = round(price * 0.98, 2)
 
         post = f"""
 📊 {pair} LONG SETUP
@@ -73,7 +98,14 @@ Stop Loss: {sl}
 
 Trade carefully.
 """
+
         send_telegram(post)
 
-for coin in coins:
-    analyze(coin)
+
+def run_bot():
+    for coin in coins:
+        analyze(coin)
+
+
+if __name__ == "__main__":
+    run_bot()
