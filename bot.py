@@ -50,6 +50,7 @@ def send_telegram(message):
     except Exception as e:
         print("Telegram error:", e)
 
+send_telegram("Bot is running on GitHub Actions.")
 
 def analyze(pair):
 
