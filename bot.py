@@ -14,9 +14,11 @@ coins = [
 "ADAUSDT","AVAXUSDT","LINKUSDT","DOTUSDT"
 ]
 
+
 def get_klines(pair):
     try:
-        url = "https://api.binance.com/api/v3/klines"
+        url = "https://data-api.binance.vision/api/v3/klines"
+
         params = {
             "symbol": pair,
             "interval": "15m",
@@ -34,8 +36,6 @@ def get_klines(pair):
     except Exception as e:
         print(f"Request failed for {pair}: {e}")
         return None
-
-
 def send_telegram(message):
     try:
         url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
